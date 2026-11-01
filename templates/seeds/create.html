@@ -1,0 +1,127 @@
+{% extends "theme/base.html" %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header mb-4">
+    <div class="page-pretitle">Community garden</div>
+    <h1 class="page-title">{% if is_edit %}Edit a post{% else %}Add a seed{% endif %}</h1>
+    <p class="text-secondary mb-0">{% if is_edit %}Update the details of your seed post.{% else %}Choose whether you have seeds to share or are looking for seeds.{% endif %}</p>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="card-body">
+            {% for field in form %}
+            {% if field.name != 'upload_images' and field.name != 'remove_images' %}
+            <div class="mb-3{% if field.name == 'offer_type' %} seed-offer-field{% elif field.name == 'price' %} seed-offer-field seed-price-field{% elif field.name == 'trade_for' %} seed-offer-field seed-trade-field{% endif %}">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div class="form-hint">{{ field.help_text }}</div>{% endif %}
+              {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            {% endif %}
+            {% endfor %}
+
+            {% if entry and entry.images.exists %}
+            <div class="mb-3">
+              <label class="form-label">Current photos</label>
+              <div class="seed-image-grid mb-3">
+                {% for seed_image in entry.images.all %}
+                <img class="seed-image-thumbnail" src="{{ seed_image.image.url }}" alt="Current photo of {{ entry.name }}">
+                {% endfor %}
+              </div>
+              <div class="form-label">{{ form.remove_images.label }}</div>
+              {{ form.remove_images }}
+              {% for error in form.remove_images.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.upload_images.id_for_label }}">{{ form.upload_images.label }}</label>
+              {{ form.upload_images }}
+              {% if form.upload_images.help_text %}<div class="form-hint">{{ form.upload_images.help_text }}</div>{% endif %}
+              {% for error in form.upload_images.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              <div class="seed-image-grid mt-3" id="seed-upload-preview" aria-live="polite"></div>
+              <div class="form-hint" id="seed-upload-count" aria-live="polite"></div>
+            </div>
+
+            {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="card-footer d-flex justify-content-between">
+            <a class="btn btn-outline-secondary" href="{% if is_edit %}{% url 'seeds:my_posts' %}{% else %}{% url 'seeds:list' %}{% endif %}">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas {% if is_edit %}fa-save{% else %}fa-plus{% endif %} me-1"></i> {% if is_edit %}Save changes{% else %}Add seed{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  (() => {
+    const kindField = document.getElementById('id_kind');
+    const offerTypeField = document.getElementById('id_offer_type');
+    const priceField = document.getElementById('id_price');
+    const tradeField = document.getElementById('id_trade_for');
+    const imageInput = document.getElementById('id_upload_images');
+    const imagePreview = document.getElementById('seed-upload-preview');
+    const offerTypeRow = document.querySelector('.seed-offer-field:not(.seed-price-field):not(.seed-trade-field)');
+    const priceRow = document.querySelector('.seed-price-field');
+    const tradeRow = document.querySelector('.seed-trade-field');
+
+    if (!kindField || !offerTypeField || !priceField || !tradeField) {
+      return;
+    }
+
+    const updateOfferFields = () => {
+      const isHave = kindField.value === 'have';
+      const offerType = offerTypeField.value;
+      offerTypeRow.hidden = !isHave;
+      priceRow.hidden = !isHave || offerType !== 'sale';
+      tradeRow.hidden = !isHave || offerType !== 'trade';
+      offerTypeField.required = isHave;
+      priceField.required = isHave && offerType === 'sale';
+      tradeField.required = isHave && offerType === 'trade';
+    };
+
+    kindField.addEventListener('change', updateOfferFields);
+    offerTypeField.addEventListener('change', updateOfferFields);
+    updateOfferFields();
+
+    if (imageInput && imagePreview) {
+      let previewUrls = [];
+      imageInput.addEventListener('change', () => {
+        previewUrls.forEach((url) => URL.revokeObjectURL(url));
+        previewUrls = [];
+        imagePreview.replaceChildren();
+        const files = Array.from(imageInput.files);
+        const countMessage = document.getElementById('seed-upload-count');
+        if (countMessage) {
+          countMessage.textContent = files.length > 3
+            ? 'Choose no more than 3 photos.'
+            : `${files.length} photo${files.length === 1 ? '' : 's'} selected.`;
+        }
+        for (const file of files) {
+          if (!file.type.startsWith('image/')) {
+            continue;
+          }
+          const preview = document.createElement('img');
+          preview.className = 'seed-image-thumbnail';
+          preview.alt = `Preview of ${file.name}`;
+          preview.src = URL.createObjectURL(file);
+          previewUrls.push(preview.src);
+          imagePreview.append(preview);
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}

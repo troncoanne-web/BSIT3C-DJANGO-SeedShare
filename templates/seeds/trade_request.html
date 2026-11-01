@@ -1,0 +1,56 @@
+{% extends "theme/base.html" %}
+
+{% block title %}Request trade for {{ entry.name }} | SeedShare{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header mb-4">
+    <div class="page-pretitle">Seed trade</div>
+    <h1 class="page-title">Request a trade for {{ entry.name }}</h1>
+    <p class="text-secondary mb-0">
+      Post owner: {{ entry.user.get_full_name|default:entry.user.username }}.
+      {{ available_quantity }} {{ entry.unit }} available.
+    </p>
+  </div>
+
+  <div class="row row-cards">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-body">
+          {% if messages %}
+          {% for message in messages %}
+          <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %}" role="status">
+            {{ message }}
+          </div>
+          {% endfor %}
+          {% endif %}
+
+          {% if entry.kind == 'have' %}
+          <p><strong>Owner is looking for:</strong> {{ entry.trade_for|linebreaksbr }}</p>
+          {% else %}
+          <p><strong>Owner is looking for:</strong> {{ entry.description|default:entry.name|linebreaksbr }}</p>
+          {% endif %}
+          <p>The owner must accept your request. You and the owner must both confirm the trade is complete before either of you can rate this post.</p>
+
+          <form method="post">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            {% endfor %}
+            <div class="btn-list">
+              <button class="btn btn-primary" type="submit">
+                <i class="fas fa-paper-plane me-1"></i> Send trade request
+              </button>
+              <a class="btn btn-outline-secondary" href="{% url 'seeds:detail' entry.pk %}">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

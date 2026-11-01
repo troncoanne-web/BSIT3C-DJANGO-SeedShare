@@ -8,7 +8,11 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
+
+from apps.users.forms import ProfileSettingsForm
+from apps.users.models import UserProfile
 
 User = get_user_model()
 
@@ -110,7 +114,9 @@ def login_view(request):
         return render(request, 'auth/login.html', {'locked': True, 'remaining': remaining})
 
     if request.method == 'GET':
-        return render(request, 'auth/login.html')
+        return render(request, 'auth/login.html', {
+            'next': request.GET.get('next', ''),
+        })
 
     username = request.POST.get('username', '').strip()
     password = request.POST.get('password', '')
@@ -119,6 +125,13 @@ def login_view(request):
     if user is not None:
         _reset_lock_state(request)
         login(request, user)
+        next_url = request.POST.get('next') or request.GET.get('next')
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
         return redirect('dashboard')
 
     failed_attempts += 1
@@ -141,6 +154,28 @@ def logout_view(request):
 @login_required(login_url='login')
 def home(request):
     return render(request, 'home.html')
+
+
+@login_required(login_url='login')
+@require_http_methods(['GET', 'POST'])
+def profile_settings(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    form = ProfileSettingsForm(
+        request.POST or None,
+        request.FILES or None,
+        user=request.user,
+        profile=profile,
+    )
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Your profile has been updated.')
+        return redirect('profile_settings')
+
+    return render(request, 'auth/profile.html', {
+        'form': form,
+        'profile': profile,
+    })
 
 
 @require_http_methods(['GET', 'POST'])

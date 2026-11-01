@@ -1,0 +1,129 @@
+{% extends "theme/base.html" %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header mb-4">
+    <div class="page-pretitle">Community garden</div>
+    <h1 class="page-title">SeedShare</h1>
+    <p class="text-secondary mb-0">Share seeds you have or let others know what you are looking for.</p>
+  </div>
+
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-success" role="status">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not user.is_authenticated %}
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="alert alert-primary d-flex flex-wrap align-items-center justify-content-between gap-3" role="status">
+        <div>
+          <strong>Want to share seeds?</strong>
+          <span class="d-block">Create an account or sign in to post seeds you have or want.</span>
+        </div>
+        <div class="btn-list">
+          <a class="btn btn-primary" href="{% url 'register' %}">Create account</a>
+          <a class="btn btn-outline-primary" href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Sign in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row row-cards">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h2 class="card-title mb-0">Community seeds</h2>
+          <div class="btn-list">
+            {% if user.is_authenticated %}
+            <a class="btn btn-primary" href="{% url 'seeds:create' %}">
+              <i class="fas fa-plus me-1"></i> Add seed
+            </a>
+            {% endif %}
+            <a class="btn btn-sm {% if not selected_kind %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'seeds:list' %}{% if search_query %}?q={{ search_query|urlencode }}{% endif %}">All</a>
+            <a class="btn btn-sm {% if selected_kind == 'have' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'seeds:list' %}?kind=have{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}">Have</a>
+            <a class="btn btn-sm {% if selected_kind == 'want' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'seeds:list' %}?kind=want{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}">Want</a>
+          </div>
+        </div>
+        <div class="card-body">
+          <form method="get" action="{% url 'seeds:list' %}" class="mb-4" role="search">
+            {% if selected_kind %}<input type="hidden" name="kind" value="{{ selected_kind }}">{% endif %}
+            <label class="visually-hidden" for="seed-search">Search seeds</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-search" aria-hidden="true"></i></span>
+              <input id="seed-search" class="form-control" type="search" name="q" value="{{ search_query }}" placeholder="Search by seed name, variety, or details">
+              <button class="btn btn-primary" type="submit">Search</button>
+              {% if search_query %}
+              <a class="btn btn-outline-secondary" href="{% url 'seeds:list' %}{% if selected_kind %}?kind={{ selected_kind }}{% endif %}">Clear</a>
+              {% endif %}
+            </div>
+          </form>
+          {% for entry in entries %}
+          <a class="d-block text-reset text-decoration-none seed-entry-link" href="{% url 'seeds:detail' entry.pk %}">
+          <article class="border-bottom pb-3 mb-3">
+            {% with cover=entry.images.all|first %}
+            {% if cover %}
+            <img class="seed-image-card mb-3" src="{{ cover.image.url }}" alt="{{ entry.name }} seed photo">
+            {% endif %}
+            {% endwith %}
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div>
+                <h3 class="h3 mb-1">{{ entry.name }}</h3>
+                {% if entry.variety %}<div class="text-secondary">{{ entry.variety }}</div>{% endif %}
+              </div>
+              <span class="badge {% if entry.kind == 'have' %}bg-green-lt text-green{% else %}bg-azure-lt text-azure{% endif %}">
+                {{ entry.get_kind_display }}
+              </span>
+            </div>
+            {% if entry.description %}<p class="mt-2 mb-1">{{ entry.description }}</p>{% endif %}
+            {% if entry.kind == 'have' and entry.offer_type %}
+            <div class="small fw-semibold">
+              {% if entry.offer_type == 'sale' %}
+              For sale: {{ entry.price }} (for {{ entry.quantity }} {{ entry.unit }})
+              {% elif entry.offer_type == 'free' %}
+              Free
+              {% elif entry.offer_type == 'trade' %}
+              Trade for: {{ entry.trade_for }}
+              {% endif %}
+            </div>
+            {% endif %}
+            <div class="small text-secondary">
+              Quantity:
+              {{ entry.available_quantity }} {{ entry.unit }} available
+              {% if entry.location %}<span class="mx-1">·</span>{{ entry.location }}{% endif %}
+            </div>
+            <div class="small text-secondary mt-1">Posted by {{ entry.user.get_full_name|default:entry.user.username }}</div>
+            <div class="seed-rating-summary mt-2">
+              <i class="fas fa-star" aria-hidden="true"></i>
+              {% if entry.rating_count %}
+              <strong>{{ entry.rating_average|floatformat:1 }}</strong>
+              <span>/ 5</span>
+              <span class="seed-rating-count">({{ entry.rating_count }} rating{{ entry.rating_count|pluralize }})</span>
+              {% else %}
+              <span>No ratings yet</span>
+              {% endif %}
+            </div>
+          </article>
+          </a>
+          {% empty %}
+          <div class="empty py-5">
+            <div class="empty-icon"><i class="fas fa-seedling fa-2x text-muted"></i></div>
+            {% if search_query %}
+            <p class="empty-title">No seeds match “{{ search_query }}”</p>
+            <p class="empty-subtitle">Try another search term or clear your search.</p>
+            {% else %}
+            <p class="empty-title">No seeds posted yet</p>
+            <p class="empty-subtitle">Add the first seed using the form.</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

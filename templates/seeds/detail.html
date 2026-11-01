@@ -1,0 +1,261 @@
+{% extends "theme/base.html" %}
+
+{% block title %}{{ entry.name }} | SeedShare{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %}" role="status">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="page-header mb-4">
+    <div class="page-pretitle">Community garden</div>
+    <h1 class="page-title">{{ entry.name }}</h1>
+    {% if entry.variety %}<p class="text-secondary mb-0">{{ entry.variety }}</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+        <span class="badge {% if entry.kind == 'have' %}bg-green-lt text-green{% else %}bg-azure-lt text-azure{% endif %}">
+          {{ entry.get_kind_display }}
+        </span>
+        {% if entry.kind == 'have' and entry.offer_type %}
+        <span class="badge bg-primary-lt text-primary">
+          {{ entry.get_offer_type_display }}
+        </span>
+        {% endif %}
+      </div>
+
+      {% if entry.images.all %}
+      <div class="seed-gallery mb-4" data-seed-gallery>
+        <div class="seed-gallery-stage" data-gallery-stage tabindex="0" aria-label="Photo gallery for {{ entry.name }}">
+          <div class="seed-gallery-track" data-gallery-track>
+            {% for seed_image in entry.images.all %}
+            <img
+              class="seed-image-detail"
+              src="{{ seed_image.image.url }}"
+              alt="{{ entry.name }} photo {{ forloop.counter }} of {{ entry.images.count }}"
+              data-gallery-image
+              aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"
+            >
+            {% endfor %}
+          </div>
+          {% if entry.images.count > 1 %}
+          <button class="seed-gallery-arrow seed-gallery-previous" type="button" aria-label="Previous photo" data-gallery-previous>
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+          </button>
+          <button class="seed-gallery-arrow seed-gallery-next" type="button" aria-label="Next photo" data-gallery-next>
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+          <div class="seed-gallery-count" aria-live="polite" data-gallery-count>1 / {{ entry.images.count }}</div>
+          {% endif %}
+        </div>
+        {% if entry.images.count > 1 %}
+        <div class="seed-gallery-thumbnails" aria-label="Choose a photo">
+          {% for seed_image in entry.images.all %}
+          <button
+            class="seed-gallery-thumbnail{% if forloop.first %} active{% endif %}"
+            type="button"
+            aria-label="Show photo {{ forloop.counter }}"
+            aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+            data-gallery-thumbnail="{{ forloop.counter0 }}"
+          >
+            <img src="{{ seed_image.image.url }}" alt="">
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if entry.kind == 'have' and entry.offer_type == 'sale' %}
+      <p class="h3">Price: {{ entry.price }} for {{ entry.quantity }} {{ entry.unit }}</p>
+      <p class="text-secondary">This price is prorated when you order a smaller quantity.</p>
+      {% elif entry.kind == 'have' and entry.offer_type == 'free' %}
+      <p class="h3">Offered for free</p>
+      {% elif entry.kind == 'have' and entry.offer_type == 'trade' %}
+      <p><strong>Looking to trade for:</strong> {{ entry.trade_for }}</p>
+      {% endif %}
+
+      {% if entry.description %}
+      <h2 class="h3 mt-4">Description</h2>
+      <p>{{ entry.description|linebreaksbr }}</p>
+      {% endif %}
+
+      <dl class="row mt-4">
+        <dt class="col-sm-3">Quantity</dt>
+        <dd class="col-sm-9">
+          {{ entry.available_quantity }} {{ entry.unit }} available
+        </dd>
+        {% if entry.location %}
+        <dt class="col-sm-3">Location</dt>
+        <dd class="col-sm-9">{{ entry.location }}</dd>
+        {% endif %}
+        <dt class="col-sm-3">Posted by</dt>
+        <dd class="col-sm-9">Posted by {{ entry.user.get_full_name|default:entry.user.username }}</dd>
+        <dt class="col-sm-3">Posted</dt>
+        <dd class="col-sm-9">{{ entry.created_at|date:"N j, Y" }}</dd>
+      </dl>
+
+      <section class="border-top pt-4 mt-4" aria-labelledby="ratings-heading">
+        <h2 class="h3" id="ratings-heading">Post rating</h2>
+        {% if entry.rating_count %}
+        <p class="mb-3">
+          <strong>{{ entry.rating_average|floatformat:1 }} / 5</strong>
+          <span class="text-secondary">({{ entry.rating_count }} rating{{ entry.rating_count|pluralize }})</span>
+        </p>
+        <ul class="list-unstyled mb-3">
+          {% for rating in entry.ratings.all %}
+          <li class="mb-1">
+            <span class="text-warning" aria-label="{{ rating.score }} out of 5 stars">
+              {% for star in "12345" %}
+              {% if forloop.counter <= rating.score %}★{% else %}☆{% endif %}
+              {% endfor %}
+            </span>
+            <span class="text-secondary">by {{ rating.user.username }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-secondary">This post has not been rated yet.</p>
+        {% endif %}
+
+        {% if can_rate %}
+        <form method="post" action="{% url 'seeds:rate' entry.pk %}" class="mt-3">
+          {% csrf_token %}
+          <fieldset>
+            <legend class="form-label">
+              {% if existing_rating %}Update your rating{% else %}Rate this post{% endif %}
+            </legend>
+            {% for choice in rating_form.score %}
+            <label class="form-check form-check-inline">
+              {{ choice.tag }}
+              <span class="form-check-label">{{ choice.choice_label }}</span>
+            </label>
+            {% endfor %}
+          </fieldset>
+          {% for error in rating_form.score.errors %}
+          <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+          <button class="btn btn-outline-primary btn-sm mt-2" type="submit">
+            {% if existing_rating %}Update rating{% else %}Submit rating{% endif %}
+          </button>
+        </form>
+        {% elif user.is_authenticated %}
+        <p class="text-secondary small mb-0">You can rate this post after you and the other participant confirm a sale or trade is complete.</p>
+        {% else %}
+        <p class="text-secondary small mb-0">Sign in and complete a sale or trade to rate this post.</p>
+        {% endif %}
+      </section>
+    </div>
+    <div class="card-footer d-flex justify-content-between flex-wrap gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'seeds:list' %}">Back to seeds</a>
+      {% if entry.kind == 'have' and entry.offer_type == 'sale' and entry.available_quantity > 0 and user != entry.user %}
+      {% if user.is_authenticated %}
+      <a class="btn btn-success" href="{% url 'seeds:order' entry.pk %}">
+        <i class="fas fa-bag-shopping me-1"></i> Order seeds
+      </a>
+      {% else %}
+      <a class="btn btn-success" href="{% url 'login' %}?next={% url 'seeds:order' entry.pk %}">
+        <i class="fas fa-bag-shopping me-1"></i> Sign in to order
+      </a>
+      {% endif %}
+      {% elif entry.kind == 'have' and entry.offer_type == 'sale' and entry.available_quantity == 0 %}
+      <span class="btn btn-secondary disabled" aria-disabled="true">Out of stock</span>
+      {% endif %}
+      {% if entry.available_quantity > 0 and entry.kind == 'want' or entry.available_quantity > 0 and entry.offer_type == 'trade' %}
+      {% if user.is_authenticated and user != entry.user %}
+      <a class="btn btn-outline-primary" href="{% url 'seeds:trade_request' entry.pk %}">
+        <i class="fas fa-handshake me-1"></i> Request a trade
+      </a>
+      {% elif not user.is_authenticated %}
+      <a class="btn btn-outline-primary" href="{% url 'login' %}?next={% url 'seeds:trade_request' entry.pk %}">
+        <i class="fas fa-handshake me-1"></i> Sign in to request a trade
+      </a>
+      {% endif %}
+      {% endif %}
+      {% if user.is_authenticated and user == entry.user %}
+      <a class="btn btn-primary" href="{% url 'seeds:edit' entry.pk %}">
+        <i class="fas fa-edit me-1"></i> Edit your post
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  (() => {
+    const gallery = document.querySelector('[data-seed-gallery]');
+    if (!gallery) {
+      return;
+    }
+
+    const stage = gallery.querySelector('[data-gallery-stage]');
+    const track = gallery.querySelector('[data-gallery-track]');
+    const images = Array.from(gallery.querySelectorAll('[data-gallery-image]'));
+    const thumbnails = Array.from(gallery.querySelectorAll('[data-gallery-thumbnail]'));
+    const count = gallery.querySelector('[data-gallery-count]');
+    let activeIndex = 0;
+    let touchStartX = null;
+
+    const showImage = (index) => {
+      activeIndex = (index + images.length) % images.length;
+      images.forEach((image, imageIndex) => {
+        image.setAttribute('aria-hidden', String(imageIndex !== activeIndex));
+      });
+      track.style.transform = `translateX(-${activeIndex * 100}%)`;
+      thumbnails.forEach((thumbnail, imageIndex) => {
+        const isActive = imageIndex === activeIndex;
+        thumbnail.classList.toggle('active', isActive);
+        thumbnail.setAttribute('aria-pressed', String(isActive));
+      });
+      if (count) {
+        count.textContent = `${activeIndex + 1} / ${images.length}`;
+      }
+    };
+
+    gallery.querySelector('[data-gallery-previous]')?.addEventListener('click', () => {
+      showImage(activeIndex - 1);
+    });
+    gallery.querySelector('[data-gallery-next]')?.addEventListener('click', () => {
+      showImage(activeIndex + 1);
+    });
+    thumbnails.forEach((thumbnail) => {
+      thumbnail.addEventListener('click', () => {
+        showImage(Number(thumbnail.dataset.galleryThumbnail));
+      });
+    });
+    stage.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        showImage(activeIndex - 1);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        showImage(activeIndex + 1);
+      }
+    });
+    stage.addEventListener('touchstart', (event) => {
+      touchStartX = event.changedTouches[0].clientX;
+    }, { passive: true });
+    stage.addEventListener('touchend', (event) => {
+      if (touchStartX === null) {
+        return;
+      }
+      const swipeDistance = event.changedTouches[0].clientX - touchStartX;
+      touchStartX = null;
+      if (Math.abs(swipeDistance) >= 40) {
+        showImage(activeIndex + (swipeDistance < 0 ? 1 : -1));
+      }
+    }, { passive: true });
+  })();
+</script>
+{% endblock %}

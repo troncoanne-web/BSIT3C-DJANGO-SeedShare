@@ -1,0 +1,98 @@
+{% extends "theme/base.html" %}
+
+{% block title %}My posts | SeedShare{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header mb-4">
+    <div class="page-pretitle">Your account</div>
+    <h1 class="page-title">My posts</h1>
+    <p class="text-secondary mb-0">View and manage the seed posts you created.</p>
+  </div>
+
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %}" role="status">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="row row-cards">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h2 class="card-title mb-0">Your seed posts</h2>
+          <a class="btn btn-primary" href="{% url 'seeds:create' %}">
+            <i class="fas fa-plus me-1"></i> Add seed
+          </a>
+        </div>
+        <div class="card-body">
+          {% for entry in entries %}
+          <article class="border-bottom pb-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div>
+                <h3 class="h3 mb-1">{{ entry.name }}</h3>
+                {% if entry.variety %}<div class="text-secondary">{{ entry.variety }}</div>{% endif %}
+              </div>
+              <span class="badge {% if entry.kind == 'have' %}bg-green-lt text-green{% else %}bg-azure-lt text-azure{% endif %}">
+                {{ entry.get_kind_display }}
+              </span>
+            </div>
+            {% if entry.description %}<p class="mt-2 mb-1">{{ entry.description }}</p>{% endif %}
+            {% if entry.kind == 'have' and entry.offer_type %}
+            <div class="small fw-semibold">
+              {% if entry.offer_type == 'sale' %}
+              For sale: {{ entry.price }} (for {{ entry.quantity }} {{ entry.unit }})
+              {% elif entry.offer_type == 'free' %}
+              Free
+              {% elif entry.offer_type == 'trade' %}
+              Trade for: {{ entry.trade_for }}
+              {% endif %}
+            </div>
+            {% endif %}
+            <div class="small text-secondary">
+              Quantity:
+              {{ entry.available_quantity }} {{ entry.unit }} available
+              {% if entry.location %}<span class="mx-1">·</span>{{ entry.location }}{% endif %}
+            </div>
+            <div class="small text-secondary mt-1">
+              {% if entry.rating_count %}
+              Rating: {{ entry.rating_average|floatformat:1 }}/5 ({{ entry.rating_count }} rating{{ entry.rating_count|pluralize }})
+              {% else %}
+              No ratings yet
+              {% endif %}
+            </div>
+            <div class="btn-list mt-3">
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'seeds:detail' entry.pk %}">
+                <i class="fas fa-eye me-1"></i> View
+              </a>
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'seeds:edit' entry.pk %}">
+                <i class="fas fa-edit me-1"></i> Edit
+              </a>
+              <form method="post" action="{% url 'seeds:delete' entry.pk %}" onsubmit="return confirm('Delete this seed post? This cannot be undone.');">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" type="submit">
+                  <i class="fas fa-trash me-1"></i> Delete
+                </button>
+              </form>
+            </div>
+          </article>
+          {% empty %}
+          <div class="empty py-5">
+            <div class="empty-icon"><i class="fas fa-seedling fa-2x text-muted"></i></div>
+            <p class="empty-title">You have not posted any seeds yet</p>
+            <p class="empty-subtitle">Create a post to share seeds you have or are looking for.</p>
+            <div class="empty-action">
+              <a class="btn btn-primary" href="{% url 'seeds:create' %}">Add seed</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

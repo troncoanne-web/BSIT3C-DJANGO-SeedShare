@@ -1,0 +1,57 @@
+{% extends "theme/base.html" %}
+
+{% block title %}Profile settings | SeedShare{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header mb-4">
+    <div class="page-pretitle">Account</div>
+    <h1 class="page-title">Profile settings</h1>
+    <p class="text-secondary mb-0">Update the username and profile picture shown on your account.</p>
+  </div>
+
+  {% for message in messages %}
+  <div class="alert alert-success" role="status">{{ message }}</div>
+  {% endfor %}
+
+  <div class="card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="card-body">
+        {% if profile.profile_picture %}
+        <div class="mb-4">
+          <label class="form-label">Current profile picture</label>
+          <div>
+            <img src="{{ profile.profile_picture.url }}" alt="Current profile picture" class="dh-profile-preview">
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+          {{ form.username }}
+          {% for error in form.username.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.profile_picture.id_for_label }}">Profile picture</label>
+          {{ form.profile_picture }}
+          <div class="form-hint">Choose an image up to 5 MB.</div>
+          {% for error in form.profile_picture.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+
+        {% if profile.profile_picture %}
+        <div class="form-check">
+          {{ form.remove_profile_picture }}
+          <label class="form-check-label" for="{{ form.remove_profile_picture.id_for_label }}">Remove current profile picture</label>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer d-flex justify-content-between">
+        <a class="btn btn-outline-secondary" href="{% url 'dashboard' %}">Cancel</a>
+        <button type="submit" class="btn btn-primary">Save changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

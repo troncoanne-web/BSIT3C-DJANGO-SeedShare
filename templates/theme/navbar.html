@@ -1,0 +1,84 @@
+<nav class="navbar navbar-expand-lg navbar-dark dh-topbar">
+  <div class="container-fluid">
+    <a href="{% url 'seeds:list' %}" class="navbar-brand d-flex align-items-center gap-2 text-decoration-none">
+      <span class="dh-brand-mark"><i class="fas fa-seedling"></i></span>
+      <span class="lh-1">
+        <span class="dh-brand-name">SeedShare</span>
+        <span class="dh-brand-sub">Community Seed Exchange</span>
+      </span>
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-navigation"
+      aria-controls="main-navigation" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="main-navigation">
+      <ul class="navbar-nav me-auto">
+        {% if user.is_authenticated %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+            <i class="fas fa-gauge-high me-1"></i> Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'list' or request.resolver_match.url_name == 'create' or request.resolver_match.url_name == 'public_seed_list' %}active{% endif %}" href="{% url 'seeds:list' %}">
+            <i class="fas fa-seedling me-1"></i> Browse seeds
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'my_posts' or request.resolver_match.url_name == 'edit' %}active{% endif %}" href="{% url 'seeds:my_posts' %}">
+            <i class="fas fa-list me-1"></i> My posts
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'orders' or request.resolver_match.url_name == 'order_action' %}active{% endif %}" href="{% url 'seeds:orders' %}">
+            <i class="fas fa-box me-1"></i> Orders
+            {% if pending_seed_request_count %}
+            <span class="badge bg-red text-white ms-1" aria-label="{{ pending_seed_request_count }} pending request{{ pending_seed_request_count|pluralize }}">
+              {{ pending_seed_request_count }}
+            </span>
+            {% endif %}
+          </a>
+        </li>
+        {% if user.is_superuser %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.app_name == 'users' %}active{% endif %}" href="{% url 'users:user_list' %}">
+            <i class="fas fa-users me-1"></i> Users
+          </a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.app_name == 'info' %}active{% endif %}" href="{% url 'info:info_list' %}">
+            <i class="fas fa-address-card me-1"></i> Info
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+
+      {% if user.is_authenticated %}
+      <div class="dh-topbar-account">
+        <a class="dh-topbar-profile" href="{% url 'profile_settings' %}">
+          {% if user.profile.profile_picture %}
+          <img class="dh-avatar dh-avatar-image" src="{{ user.profile.profile_picture.url }}" alt="">
+          {% else %}
+          <span class="dh-avatar">{{ user.username|first|upper }}</span>
+          {% endif %}
+          <span class="dh-topbar-user-details">
+            <span class="dh-user-name">{{ user.username }}</span>
+            <span class="dh-user-role">{% if user.is_superuser %}Administrator{% else %}Farmer{% endif %}</span>
+          </span>
+        </a>
+        <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">
+          <i class="fas fa-sign-out-alt me-1"></i> Logout
+        </a>
+      </div>
+      {% else %}
+      <div class="dh-topbar-account">
+        <a class="btn btn-outline-light btn-sm" href="{% url 'login' %}">Sign in</a>
+        <a class="btn btn-primary btn-sm" href="{% url 'register' %}">Register</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</nav>

@@ -18,12 +18,15 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from apps.seeds.views import seed_list
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', seed_list, name='public_seed_list'),
     path('', include('apps.core.urls')),
     path('users/', include('apps.users.urls')),
     path('info/', include('apps.info.urls')),
+    path('seeds/', include('apps.seeds.urls')),
 ]
 
 if settings.DEBUG:

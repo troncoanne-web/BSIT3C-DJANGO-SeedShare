@@ -1,0 +1,221 @@
+{% extends "theme/base.html" %}
+
+{% block title %}Orders | SeedShare{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header mb-4">
+    <div class="page-pretitle">Your account</div>
+    <h1 class="page-title">Orders</h1>
+    <p class="text-secondary mb-0">
+      Review sale and trade requests. Both participants must confirm completion before the post can be rated.
+    </p>
+  </div>
+
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %}" role="status">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="row row-cards">
+    <div class="col-12">
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title mb-0">Requests for your posts</h2>
+        </div>
+        <div class="card-body">
+          {% for order in incoming_orders %}
+          <article class="border-bottom pb-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div>
+                <h3 class="h3 mb-1">{{ order.entry.name }}</h3>
+                <div>From {{ order.buyer.get_full_name|default:order.buyer.username }}</div>
+              </div>
+              <span class="badge {% if order.status == 'pending' %}bg-yellow-lt text-yellow{% elif order.status == 'rejected' %}bg-red-lt text-red{% else %}bg-green-lt text-green{% endif %}">
+                {{ order.get_status_display }}
+              </span>
+            </div>
+            <dl class="row mt-3 mb-2">
+              <dt class="col-sm-3">Quantity</dt>
+              <dd class="col-sm-9">{{ order.quantity }} {{ order.entry.unit }}</dd>
+              <dt class="col-sm-3">Total</dt>
+              <dd class="col-sm-9">{{ order.total_price }}</dd>
+              <dt class="col-sm-3">Delivery address</dt>
+              <dd class="col-sm-9">{{ order.delivery_address|linebreaksbr }}</dd>
+              <dt class="col-sm-3">Requested</dt>
+              <dd class="col-sm-9">{{ order.created_at|date:"N j, Y, P" }}</dd>
+            </dl>
+            {% if order.status == 'pending' %}
+            <div class="btn-list">
+              <form method="post" action="{% url 'seeds:order_action' order.pk 'accept' %}">
+                {% csrf_token %}
+                <button class="btn btn-success btn-sm" type="submit">Accept order</button>
+              </form>
+              <form method="post" action="{% url 'seeds:order_action' order.pk 'reject' %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger btn-sm" type="submit">Reject</button>
+              </form>
+            </div>
+            {% elif order.status == 'accepted' %}
+            <p class="small text-secondary">
+              Buyer {% if order.buyer_confirmed_completion %}confirmed{% else %}has not confirmed{% endif %};
+              you {% if order.seller_confirmed_completion %}confirmed{% else %}have not confirmed{% endif %}.
+            </p>
+            {% if not order.seller_confirmed_completion %}
+            <form method="post" action="{% url 'seeds:order_complete' order.pk %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-success btn-sm" type="submit">Confirm order complete</button>
+            </form>
+            {% endif %}
+            {% endif %}
+          </article>
+          {% empty %}
+          <p class="text-secondary mb-0">You have no order requests for your posts.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <div class="col-12">
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title mb-0">Orders you placed</h2>
+        </div>
+        <div class="card-body">
+          {% for order in outgoing_orders %}
+          <article class="border-bottom pb-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div>
+                <h3 class="h3 mb-1">{{ order.entry.name }}</h3>
+                <div>Seller: {{ order.entry.user.get_full_name|default:order.entry.user.username }}</div>
+              </div>
+              <span class="badge {% if order.status == 'pending' %}bg-yellow-lt text-yellow{% elif order.status == 'rejected' %}bg-red-lt text-red{% else %}bg-green-lt text-green{% endif %}">
+                {{ order.get_status_display }}
+              </span>
+            </div>
+            <dl class="row mt-3 mb-0">
+              <dt class="col-sm-3">Quantity</dt>
+              <dd class="col-sm-9">{{ order.quantity }} {{ order.entry.unit }}</dd>
+              <dt class="col-sm-3">Total</dt>
+              <dd class="col-sm-9">{{ order.total_price }}</dd>
+              <dt class="col-sm-3">Delivery address</dt>
+              <dd class="col-sm-9">{{ order.delivery_address|linebreaksbr }}</dd>
+              <dt class="col-sm-3">Requested</dt>
+              <dd class="col-sm-9">{{ order.created_at|date:"N j, Y, P" }}</dd>
+            </dl>
+            {% if order.status == 'accepted' %}
+            <p class="small text-secondary">
+              You {% if order.buyer_confirmed_completion %}confirmed{% else %}have not confirmed{% endif %};
+              seller {% if order.seller_confirmed_completion %}confirmed{% else %}has not confirmed{% endif %}.
+            </p>
+            {% if not order.buyer_confirmed_completion %}
+            <form method="post" action="{% url 'seeds:order_complete' order.pk %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-success btn-sm" type="submit">Confirm order complete</button>
+            </form>
+            {% endif %}
+            {% endif %}
+          </article>
+          {% empty %}
+          <p class="text-secondary mb-0">You have not placed any orders.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <div class="col-12">
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title mb-0">Trade requests for your posts</h2>
+        </div>
+        <div class="card-body">
+          {% for trade in incoming_trades %}
+          <article class="border-bottom pb-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div>
+                <h3 class="h3 mb-1">{{ trade.entry.name }}</h3>
+                <div>From {{ trade.requester.get_full_name|default:trade.requester.username }}</div>
+              </div>
+              <span class="badge {% if trade.status == 'pending' %}bg-yellow-lt text-yellow{% elif trade.status == 'rejected' %}bg-red-lt text-red{% else %}bg-green-lt text-green{% endif %}">
+                {{ trade.get_status_display }}
+              </span>
+            </div>
+            <p class="mt-2 mb-1"><strong>Quantity:</strong> {{ trade.quantity }} {{ trade.entry.unit }}</p>
+            <p class="mb-2"><strong>Offered:</strong> {{ trade.offer_description|linebreaksbr }}</p>
+            {% if trade.status == 'pending' %}
+            <div class="btn-list">
+              <form method="post" action="{% url 'seeds:trade_action' trade.pk 'accept' %}">
+                {% csrf_token %}
+                <button class="btn btn-success btn-sm" type="submit">Accept trade</button>
+              </form>
+              <form method="post" action="{% url 'seeds:trade_action' trade.pk 'reject' %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger btn-sm" type="submit">Reject</button>
+              </form>
+            </div>
+            {% elif trade.status == 'accepted' %}
+            <p class="small text-secondary">
+              Requester {% if trade.requester_confirmed_completion %}confirmed{% else %}has not confirmed{% endif %};
+              you {% if trade.owner_confirmed_completion %}confirmed{% else %}have not confirmed{% endif %}.
+            </p>
+            {% if not trade.owner_confirmed_completion %}
+            <form method="post" action="{% url 'seeds:trade_action' trade.pk 'complete' %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-success btn-sm" type="submit">Confirm trade complete</button>
+            </form>
+            {% endif %}
+            {% endif %}
+          </article>
+          {% empty %}
+          <p class="text-secondary mb-0">You have no trade requests.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <div class="col-12">
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title mb-0">Trade requests you sent</h2>
+        </div>
+        <div class="card-body">
+          {% for trade in outgoing_trades %}
+          <article class="border-bottom pb-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div>
+                <h3 class="h3 mb-1">{{ trade.entry.name }}</h3>
+                <div>Post owner: {{ trade.entry.user.get_full_name|default:trade.entry.user.username }}</div>
+              </div>
+              <span class="badge {% if trade.status == 'pending' %}bg-yellow-lt text-yellow{% elif trade.status == 'rejected' %}bg-red-lt text-red{% else %}bg-green-lt text-green{% endif %}">
+                {{ trade.get_status_display }}
+              </span>
+            </div>
+            <p class="mt-2 mb-1"><strong>Quantity:</strong> {{ trade.quantity }} {{ trade.entry.unit }}</p>
+            <p class="mb-2"><strong>Your offer:</strong> {{ trade.offer_description|linebreaksbr }}</p>
+            {% if trade.status == 'accepted' %}
+            <p class="small text-secondary">
+              You {% if trade.requester_confirmed_completion %}confirmed{% else %}have not confirmed{% endif %};
+              owner {% if trade.owner_confirmed_completion %}confirmed{% else %}has not confirmed{% endif %}.
+            </p>
+            {% if not trade.requester_confirmed_completion %}
+            <form method="post" action="{% url 'seeds:trade_action' trade.pk 'complete' %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-success btn-sm" type="submit">Confirm trade complete</button>
+            </form>
+            {% endif %}
+            {% endif %}
+          </article>
+          {% empty %}
+          <p class="text-secondary mb-0">You have not sent any trade requests.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

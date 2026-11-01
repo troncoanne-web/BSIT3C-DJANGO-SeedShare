@@ -97,9 +97,21 @@
                         <td class="text-muted">{{ u.id }}</td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
+                                {% if u.profile.profile_picture %}
+                                <img
+                                    class="avatar avatar-sm"
+                                    src="{{ u.profile.profile_picture.url }}"
+                                    alt="{{ u.username }} profile picture"
+                                >
+                                {% else %}
                                 <span class="avatar avatar-sm bg-blue-lt">
+                                    {% if u.first_name or u.last_name %}
                                     {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
+                                    {% else %}
+                                    {{ u.username|first|upper }}
+                                    {% endif %}
                                 </span>
+                                {% endif %}
                                 <div>
                                     <div class="fw-medium">{{ u.first_name }} {{ u.last_name }}</div>
                                 </div>

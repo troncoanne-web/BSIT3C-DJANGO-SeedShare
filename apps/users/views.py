@@ -19,7 +19,7 @@ def _is_superuser(user):
 def user_list_page(request):
     query = request.GET.get('q', '').strip()
 
-    users_list = User.objects.all().order_by('-date_joined')
+    users_list = User.objects.select_related('profile').order_by('-date_joined')
 
     if query:
         users_list = users_list.filter(

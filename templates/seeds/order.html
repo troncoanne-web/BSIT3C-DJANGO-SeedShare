@@ -1,0 +1,86 @@
+{% extends "theme/base.html" %}
+
+{% block title %}Order {{ entry.name }} | SeedShare{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header mb-4">
+    <div class="page-pretitle">Seed order</div>
+    <h1 class="page-title">Order {{ entry.name }}</h1>
+    <p class="text-secondary mb-0">
+      Sold by {{ entry.user.get_full_name|default:entry.user.username }}.
+      {{ available_quantity }} {{ entry.unit }} available.
+    </p>
+  </div>
+
+  <div class="row row-cards">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-body">
+          {% if messages %}
+          {% for message in messages %}
+          <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %}" role="status">
+            {{ message }}
+          </div>
+          {% endfor %}
+          {% endif %}
+
+          <p>
+            The posted price is {{ entry.price }} for {{ entry.quantity }} {{ entry.unit }}.
+            Your total is prorated by the quantity you request. The seller must accept your request
+            before it is confirmed.
+          </p>
+          <form method="post" data-order-form data-price="{{ entry.price }}" data-listed-quantity="{{ entry.quantity }}">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<div class="form-hint">{{ field.help_text }}</div>{% endif %}
+              {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            {% endfor %}
+            <p class="h3">Estimated total: <span data-order-total>{{ entry.price }}</span></p>
+            <p class="text-secondary small">The final total is calculated and checked when you submit.</p>
+            <div class="btn-list">
+              <button class="btn btn-success" type="submit">
+                <i class="fas fa-paper-plane me-1"></i> Send order request
+              </button>
+              <a class="btn btn-outline-secondary" href="{% url 'seeds:detail' entry.pk %}">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  (() => {
+    const form = document.querySelector('[data-order-form]');
+    if (!form) {
+      return;
+    }
+
+    const quantity = form.querySelector('[name="quantity"]');
+    const total = form.querySelector('[data-order-total]');
+    const price = Number(form.dataset.price);
+    const listedQuantity = Number(form.dataset.listedQuantity);
+    const updateTotal = () => {
+      const requestedQuantity = Number(quantity.value);
+      if (!Number.isFinite(requestedQuantity) || requestedQuantity < 1) {
+        total.textContent = '—';
+        return;
+      }
+      const cents = Math.round((price * requestedQuantity / listedQuantity + Number.EPSILON) * 100);
+      total.textContent = cents > 0 ? (cents / 100).toFixed(2) : 'Select a larger quantity';
+    };
+
+    quantity.addEventListener('input', updateTotal);
+    updateTotal();
+  })();
+</script>
+{% endblock %}
